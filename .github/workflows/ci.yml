@@ -1,4 +1,4 @@
-name: Python CI
+name: Python CI/CD
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
     branches:
       - main
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+permissions:
+  id-token: write
+  contents: read
 
-    permissions:
-      id-token: write
-      contents: read
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -40,3 +40,17 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ vars.ACR_LOGIN_SERVER }}
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }} .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }}
