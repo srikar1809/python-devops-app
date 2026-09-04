@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -33,6 +34,14 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      - name: Security scan - filesystem
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -51,6 +60,13 @@ jobs:
             --platform linux/amd64 \
             -t ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }} .
 
+      - name: Security scan - Docker image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
       - name: Push Docker image
         run: |
           docker push ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }}
@@ -60,6 +76,4 @@ jobs:
           az containerapp update \
             --name ${{ vars.CONTAINER_APP_NAME }} \
             --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
-            --image ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }}  
-
-          
+            --image ${{ vars.ACR_LOGIN_SERVER }}/python-devops-app:${{ github.sha }}
